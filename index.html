@@ -10,6 +10,7 @@
       padding: 0;
       box-sizing: border-box;
       font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+      -webkit-tap-highlight-color: transparent;
     }
 
     html, body {
@@ -57,6 +58,7 @@
       transition: .35s;
       position: relative;
       user-select: none;
+      outline: none
     }
 
     .nav-item.active,
@@ -193,6 +195,7 @@
       opacity: 0;
       transform: translateX(100px);
       transition: opacity 0.6s cubic-bezier(.22,1,.36,1), transform 0.6s cubic-bezier(.22,1,.36,1), box-shadow 0.3s ease, border-color 0.3s ease;
+      outline: none
     }
 
     .project-card.show {
