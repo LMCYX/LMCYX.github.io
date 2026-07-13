@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>密文生成器 · 加密/解密分离</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: #f0f4f8;
+            padding: 30px 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: white;
+            border-radius: 24px;
+            padding: 35px 30px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        }
+        h1 {
+            font-size: 28px;
+            color: #1a3a4a;
+            margin-top: 0;
+            margin-bottom: 6px;
+        }
+        .subtitle {
+            color: #5a7a8a;
+            font-size: 14px;
+            margin-bottom: 28px;
+            border-left: 3px solid #3a8aaa;
+            padding-left: 14px;
+        }
+        .split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        @media (max-width: 700px) {
+            .split {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+        }
+        .section {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 22px 20px 26px;
+            border: 1px solid #e2e8f0;
+        }
+        .section h2 {
+            font-size: 18px;
+            color: #1a3a4a;
+            margin-top: 0;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section h2 .badge {
+            font-size: 12px;
+            background: #3a8aaa;
+            color: white;
+            padding: 2px 12px;
+            border-radius: 20px;
+        }
+        .section.encrypt-section h2 .badge {
+            background: #2a7a5a;
+        }
+        .section.decrypt-section h2 .badge {
+            background: #8a5a3a;
+        }
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #2a4a5a;
+            margin-bottom: 5px;
+        }
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #d0dce8;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border 0.2s;
+            background: white;
+            resize: vertical;
+        }
+        textarea:focus, input[type="text"]:focus {
+            border-color: #3a8aaa;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(58, 138, 170, 0.12);
+        }
+        textarea {
+            min-height: 80px;
+        }
+        .field {
+            margin-bottom: 14px;
+        }
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #e8eef4;
+            color: #1a3a4a;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .btn:active {
+            transform: scale(0.97);
+        }
+        .btn-primary {
+            background: #2a7a5a;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #1e6a4a;
+        }
+        .btn-secondary {
+            background: #8a5a3a;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #7a4a2a;
+        }
+        .btn-copy {
+            background: #3a6a8a;
+            color: white;
+            padding: 6px 16px;
+            font-size: 12px;
+        }
+        .btn-copy:hover {
+            background: #2a5a7a;
+        }
+        .result-area {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+        .result-area textarea {
+            flex: 1;
+            min-height: 60px;
+            background: #f0f6fa;
+        }
+        .result-area .btn-copy {
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 18px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 13px;
+            color: #6a8a9a;
+            text-align: center;
+        }
+        .seed-global {
+            background: #f0f6fa;
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 24px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .seed-global label {
+            margin-bottom: 0;
+            font-weight: 600;
+            color: #1a3a4a;
+        }
+        .seed-global input {
+            flex: 1;
+            min-width: 150px;
+            padding: 8px 14px;
+            border: 1px solid #d0dce8;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .seed-global input:focus {
+            border-color: #3a8aaa;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(58, 138, 170, 0.12);
+        }
+        .hint {
+            font-size: 12px;
+            color: #6a8a9a;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 密文生成器</h1>
+        <div class="subtitle">自创算法 · 特殊堆叠字符编码 · 加密/解密分离</div>
+
+        <!-- 全局种子 -->
+        <div class="seed-global">
+            <label>🔑 种子 (密码)</label>
+            <input type="text" id="globalSeed" placeholder="输入种子，例如: mySecretKey" value="mySecretKey">
+            <span class="hint">加密和解密使用相同的种子</span>
+        </div>
+
+        <div class="split">
+            <!-- ===== 加密区域 ===== -->
+            <div class="section encrypt-section">
+                <h2>🔒 加密 <span class="badge">明文 → 密文</span></h2>
+                <div class="field">
+                    <label>📝 明文</label>
+                    <textarea id="plainText" placeholder="输入要加密的文字..."></textarea>
+                </div>
+                <button class="btn btn-primary" id="encryptBtn">🔒 加密</button>
+                <div style="margin-top: 14px;">
+                    <label>📋 密文结果</label>
+                    <div class="result-area">
+                        <textarea id="encryptResult" readonly placeholder="加密后的密文将显示在这里..."></textarea>
+                        <button class="btn btn-copy" id="copyEncryptResult">复制</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 解密区域 ===== -->
+            <div class="section decrypt-section">
+                <h2>🔓 解密 <span class="badge">密文 → 明文</span></h2>
+                <div class="field">
+                    <label>📝 密文</label>
+                    <textarea id="cipherText" placeholder="输入要解密的密文..."></textarea>
+                </div>
+                <button class="btn btn-secondary" id="decryptBtn">🔓 解密</button>
+                <div style="margin-top: 14px;">
+                    <label>📋 明文结果</label>
+                    <div class="result-area">
+                        <textarea id="decryptResult" readonly placeholder="解密后的明文将显示在这里..."></textarea>
+                        <button class="btn btn-copy" id="copyDecryptResult">复制</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <span>密文使用堆叠符号 ̅ 编码，每个Base64字符映射为1-64个 ̅，用空格分隔</span>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ----- DOM 引用 -----
+            const globalSeed = document.getElementById('globalSeed');
+            const plainText = document.getElementById('plainText');
+            const cipherText = document.getElementById('cipherText');
+            const encryptResult = document.getElementById('encryptResult');
+            const decryptResult = document.getElementById('decryptResult');
+            const encryptBtn = document.getElementById('encryptBtn');
+            const decryptBtn = document.getElementById('decryptBtn');
+            const copyEncryptResult = document.getElementById('copyEncryptResult');
+            const copyDecryptResult = document.getElementById('copyDecryptResult');
+
+            // ============================================================
+            //  特殊编码映射：Base64字符 → 堆叠字符
+            // ============================================================
+            const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+            function charToStack(c) {
+                if (c === '=') return '';
+                const index = BASE64_CHARS.indexOf(c);
+                if (index === -1) return c;
+                const count = index + 1;
+                return '̅'.repeat(count);
+            }
+
+            function stackToChar(stack) {
+                if (!stack) return '=';
+                const count = stack.length;
+                if (count >= 1 && count <= 64) {
+                    const index = count - 1;
+                    return BASE64_CHARS[index] || '?';
+                }
+                return '?';
+            }
+
+            function encodeBase64ToStack(base64Str) {
+                let clean = base64Str.replace(/=+$/, '');
+                const parts = [];
+                for (let i = 0; i < clean.length; i++) {
+                    parts.push(charToStack(clean[i]));
+                }
+                return parts.join(' ');
+            }
+
+            function decodeStackToBase64(stackStr) {
+                const parts = stackStr.split(' ');
+                let base64 = '';
+                for (let i = 0; i < parts.length; i++) {
+                    const ch = stackToChar(parts[i]);
+                    if (ch === '?') {
+                        throw new Error('无法识别的堆叠字符: ' + parts[i]);
+                    }
+                    base64 += ch;
+                }
+                while (base64.length % 4 !== 0) {
+                    base64 += '=';
+                }
+                return base64;
+            }
+
+            // ============================================================
+            //  加密/解密算法
+            // ============================================================
+
+            function createPRNG(seed) {
+                let state = 0;
+                for (let i = 0; i < seed.length; i++) {
+                    state = ((state << 5) - state + seed.charCodeAt(i)) & 0xFFFFFFFF;
+                }
+                if (state === 0) state = 0x9E3779B9;
+                return function() {
+                    state = (state * 1103515245 + 12345) & 0xFFFFFFFF;
+                    return (state >>> 0) / 4294967296;
+                };
+            }
+
+            function encrypt(text, seed) {
+                if (!text || !seed) return '';
+
+                const utf8 = unescape(encodeURIComponent(text));
+                const bytes = [];
+                for (let i = 0; i < utf8.length; i++) {
+                    bytes.push(utf8.charCodeAt(i));
+                }
+
+                const len = bytes.length;
+
+                const prng = createPRNG(seed);
+                const keyStream = [];
+                for (let i = 0; i < len; i++) {
+                    keyStream.push(Math.floor(prng() * 256));
+                }
+
+                const prng2 = createPRNG(seed + "perm");
+                const permTable = [];
+                for (let i = 0; i < 256; i++) permTable.push(i);
+                for (let i = 255; i > 0; i--) {
+                    const j = Math.floor(prng2() * (i + 1));
+                    [permTable[i], permTable[j]] = [permTable[j], permTable[i]];
+                }
+
+                const step1 = [];
+                for (let i = 0; i < len; i++) {
+                    step1.push(bytes[i] ^ keyStream[i]);
+                }
+
+                const step2 = [];
+                for (let i = 0; i < len; i++) {
+                    step2.push(permTable[step1[i]]);
+                }
+
+                const prng3 = createPRNG(seed + "shift");
+                const step3 = [];
+                for (let i = 0; i < len; i++) {
+                    let val = step2[i];
+                    const shift = (i * 7 + 13 + Math.floor(prng3() * 64)) & 0xFF;
+                    val = (val + shift) & 0xFF;
+                    step3.push(val);
+                }
+
+                const prng4 = createPRNG(seed + "xor");
+                const step4 = [];
+                for (let i = 0; i < len; i++) {
+                    let val = step3[i];
+                    const xorVal = (i * 3 + 5 + Math.floor(prng4() * 32)) & 0xFF;
+                    val = val ^ xorVal;
+                    step4.push(val);
+                }
+
+                const binary = String.fromCharCode.apply(null, step4);
+                const base64 = btoa(binary);
+                return encodeBase64ToStack(base64);
+            }
+
+            function decrypt(cipherStack, seed) {
+                if (!cipherStack || !seed) return '';
+
+                try {
+                    const base64 = decodeStackToBase64(cipherStack);
+                    const binary = atob(base64);
+                    const bytes = [];
+                    for (let i = 0; i < binary.length; i++) {
+                        bytes.push(binary.charCodeAt(i));
+                    }
+
+                    const len = bytes.length;
+
+                    const prng4 = createPRNG(seed + "xor");
+                    const step4_rev = [];
+                    for (let i = 0; i < len; i++) {
+                        let val = bytes[i];
+                        const xorVal = (i * 3 + 5 + Math.floor(prng4() * 32)) & 0xFF;
+                        val = val ^ xorVal;
+                        step4_rev.push(val);
+                    }
+
+                    const prng3 = createPRNG(seed + "shift");
+                    const step3_rev = [];
+                    for (let i = 0; i < len; i++) {
+                        let val = step4_rev[i];
+                        const shift = (i * 7 + 13 + Math.floor(prng3() * 64)) & 0xFF;
+                        val = (val - shift) & 0xFF;
+                        step3_rev.push(val);
+                    }
+
+                    const prng2 = createPRNG(seed + "perm");
+                    const permTable = [];
+                    for (let i = 0; i < 256; i++) permTable.push(i);
+                    for (let i = 255; i > 0; i--) {
+                        const j = Math.floor(prng2() * (i + 1));
+                        [permTable[i], permTable[j]] = [permTable[j], permTable[i]];
+                    }
+                    const invPerm = [];
+                    for (let i = 0; i < 256; i++) {
+                        invPerm[permTable[i]] = i;
+                    }
+
+                    const step2_rev = [];
+                    for (let i = 0; i < len; i++) {
+                        step2_rev.push(invPerm[step3_rev[i]]);
+                    }
+
+                    const prng = createPRNG(seed);
+                    const keyStream = [];
+                    for (let i = 0; i < len; i++) {
+                        keyStream.push(Math.floor(prng() * 256));
+                    }
+
+                    const step1_rev = [];
+                    for (let i = 0; i < len; i++) {
+                        step1_rev.push(step2_rev[i] ^ keyStream[i]);
+                    }
+
+                    const utf8 = String.fromCharCode.apply(null, step1_rev);
+                    return decodeURIComponent(escape(utf8));
+                } catch (e) {
+                    return '❌ 解密失败: ' + e.message;
+                }
+            }
+
+            // ----- 事件绑定 -----
+            encryptBtn.addEventListener('click', function() {
+                const text = plainText.value;
+                const seed = globalSeed.value;
+                if (!text) { alert('请先输入明文'); return; }
+                if (!seed) { alert('请先输入种子'); return; }
+                try {
+                    const result = encrypt(text, seed);
+                    encryptResult.value = result;
+                } catch (e) {
+                    alert('加密失败: ' + e.message);
+                }
+            });
+
+            decryptBtn.addEventListener('click', function() {
+                const cipher = cipherText.value;
+                const seed = globalSeed.value;
+                if (!cipher) { alert('请先输入密文'); return; }
+                if (!seed) { alert('请先输入种子'); return; }
+                try {
+                    const result = decrypt(cipher, seed);
+                    decryptResult.value = result;
+                } catch (e) {
+                    alert('解密失败: ' + e.message);
+                }
+            });
+
+            // 复制功能
+            copyEncryptResult.addEventListener('click', function() {
+                const text = encryptResult.value;
+                if (!text) { alert('没有内容可复制'); return; }
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('已复制密文！');
+                }).catch(() => {
+                    encryptResult.select();
+                    document.execCommand('copy');
+                    alert('已复制密文！');
+                });
+            });
+
+            copyDecryptResult.addEventListener('click', function() {
+                const text = decryptResult.value;
+                if (!text) { alert('没有内容可复制'); return; }
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('已复制明文！');
+                }).catch(() => {
+                    decryptResult.select();
+                    document.execCommand('copy');
+                    alert('已复制明文！');
+                });
+            });
+
+            // 回车快捷键（在输入框按Ctrl+Enter触发对应操作）
+            plainText.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    encryptBtn.click();
+                }
+            });
+            cipherText.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    decryptBtn.click();
+                }
+            });
+
+        })();
+    </script>
+</body>
+</html>
