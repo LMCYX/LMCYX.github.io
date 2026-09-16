@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>液态玻璃 · Liquid Glass UI</title>
+<style>
+  :root {
+    --bg: #0a0d1c;
+    --ink: #eef1fb;
+    --ink-dim: rgba(238, 241, 251, 0.62);
+    --ink-faint: rgba(238, 241, 251, 0.38);
+    --violet: #8b6cff;
+    --cyan: #41d8ff;
+    --pink: #ff7ac6;
+    --glass-bg: linear-gradient(135deg, rgba(255,255,255,0.13), rgba(255,255,255,0.035));
+    --glass-border: rgba(255,255,255,0.16);
+    --radius: 26px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { min-height: 100%; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "HarmonyOS Sans SC",
+                 "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: rgba(139, 108, 255, 0.45); }
+
+  /* ---------- 背景极光 ---------- */
+  .aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.5;
+    will-change: transform;
+  }
+  .b1 { width: 46vw; height: 46vw; background: #5b3df0; top: -18vw; left: -10vw; animation: drift1 26s ease-in-out infinite alternate; }
+  .b2 { width: 38vw; height: 38vw; background: #0ea5d6; top: 22%; right: -12vw; animation: drift2 32s ease-in-out infinite alternate; }
+  .b3 { width: 34vw; height: 34vw; background: #e04ba0; bottom: -16vw; left: 24%; animation: drift3 29s ease-in-out infinite alternate; }
+  .b4 { width: 24vw; height: 24vw; background: #7b5cff; top: 48%; left: 42%; opacity: 0.32; animation: drift1 38s ease-in-out infinite alternate-reverse; }
+
+  @keyframes drift1 { to { transform: translate(9vw, 7vh) scale(1.15); } }
+  @keyframes drift2 { to { transform: translate(-8vw, 9vh) scale(0.92) rotate(24deg); } }
+  @keyframes drift3 { to { transform: translate(7vw, -8vh) scale(1.1) rotate(-18deg); } }
+
+  /* 细腻噪点 */
+  .noise {
+    position: fixed; inset: 0; z-index: 2; pointer-events: none; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ---------- 玻璃通用 ---------- */
+  .glass {
+    position: relative;
+    background: var(--glass-bg);
+    backdrop-filter: blur(26px) saturate(170%);
+    -webkit-backdrop-filter: blur(26px) saturate(170%);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    box-shadow:
+      0 10px 34px rgba(3, 6, 20, 0.45),
+      inset 0 1px 0 rgba(255,255,255,0.22),
+      inset 0 -1px 0 rgba(255,255,255,0.04);
+  }
+  /* 顶部高光 */
+  .glass::before {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(115deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.02) 42%, transparent 60%);
+    pointer-events: none;
+  }
+
+  /* ---------- 布局 ---------- */
+  .layout {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-columns: 264px minmax(0, 1fr);
+    gap: 26px;
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 26px;
+  }
+
+  /* ---------- 侧边栏 ---------- */
+  .sidebar {
+    display: flex; flex-direction: column;
+    padding: 26px 18px;
+    position: sticky; top: 26px;
+    height: calc(100vh - 52px);
+  }
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 12px 24px;
+  }
+  .logo-mark {
+    width: 42px; height: 42px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--violet), var(--cyan));
+    display: grid; place-items: center;
+    box-shadow: 0 6px 20px rgba(139, 108, 255, 0.45), inset 0 1px 0 rgba(255,255,255,0.5);
+    font-size: 20px;
+  }
+  .logo-name { font-weight: 700; font-size: 17px; letter-spacing: 0.5px; }
+  .logo-sub { font-size: 11px; color: var(--ink-faint); letter-spacing: 2px; }
+
+  .nav { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .nav-item {
+    display: flex; align-items: center; gap: 13px;
+    padding: 12px 14px;
+    border-radius: 15px;
+    color: var(--ink-dim);
+    text-decoration: none;
+    font-size: 14.5px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.25s ease;
+  }
+  .nav-item svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .nav-item:hover { color: var(--ink); background: rgba(255,255,255,0.07); transform: translateX(3px); }
+  .nav-item.active {
+    color: #fff;
+    background: linear-gradient(120deg, rgba(139,108,255,0.35), rgba(65,216,255,0.22));
+    border-color: rgba(255,255,255,0.16);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 16px rgba(139,108,255,0.2);
+  }
+
+  .user {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 18px; padding: 12px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.09);
+  }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex: none;
+    background: conic-gradient(from 210deg, var(--pink), var(--violet), var(--cyan), var(--pink));
+    display: grid; place-items: center; font-size: 17px;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.25);
+  }
+  .user-name { font-size: 13.5px; font-weight: 600; }
+  .user-plan { font-size: 11px; color: var(--ink-faint); }
+  .user-badge {
+    margin-left: auto;
+    font-size: 10px; letter-spacing: 1px;
+    padding: 3px 8px; border-radius: 999px;
+    color: #ffe9a8;
+    background: rgba(255, 210, 92, 0.14);
+    border: 1px solid rgba(255, 210, 92, 0.3);
+  }
+
+  /* ---------- 内容区 ---------- */
+  .content { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+
+  .topbar {
+    display: flex; align-items: center; gap: 20px;
+    padding: 20px 26px;
+  }
+  .greet { font-size: 15px; color: var(--ink-dim); }
+  .greet b { display: block; font-size: 23px; color: var(--ink); font-weight: 700; margin-top: 2px; }
+  .date-line { font-size: 12.5px; color: var(--ink-faint); margin-top: 6px; letter-spacing: 0.4px; }
+
+  .search {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 18px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: var(--ink-faint);
+    min-width: 240px;
+  }
+  .search svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; flex: none; }
+  .search input {
+    flex: 1; border: none; outline: none; background: transparent;
+    color: var(--ink); font-size: 13.5px; font-family: inherit;
+  }
+  .search input::placeholder { color: var(--ink-faint); }
+  .search kbd {
+    font-size: 11px; padding: 2px 7px; border-radius: 6px;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);
+    color: var(--ink-faint); font-family: inherit;
+  }
+
+  .clock { text-align: right; }
+  .clock-time {
+    font-size: 30px; font-weight: 700; letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(120deg, #fff, #bcd8ff);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .clock-zone { font-size: 11px; color: var(--ink-faint); letter-spacing: 1px; }
+
+  /* ---------- 卡片 ---------- */
+  .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 22px; }
+  .card { padding: 24px; overflow: hidden; transition: transform 0.3s ease, box-shadow 0.3s ease; }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 16px 44px rgba(3,6,20,0.55), inset 0 1px 0 rgba(255,255,255,0.28); }
+  .card h3 { font-size: 13px; font-weight: 600; color: var(--ink-dim); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 16px; }
+
+  .span-4 { grid-column: span 4; }
+  .span-5 { grid-column: span 5; }
+  .span-7 { grid-column: span 7; }
+
+  /* 统计卡 */
+  .stat { display: flex; align-items: center; gap: 16px; }
+  .stat-icon {
+    width: 52px; height: 52px; border-radius: 17px; flex: none;
+    display: grid; place-items: center; font-size: 24px;
+    border: 1px solid rgba(255,255,255,0.16);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+  .ic-violet { background: linear-gradient(135deg, rgba(139,108,255,0.4), rgba(139,108,255,0.12)); }
+  .ic-cyan   { background: linear-gradient(135deg, rgba(65,216,255,0.38), rgba(65,216,255,0.1)); }
+  .ic-pink   { background: linear-gradient(135deg, rgba(255,122,198,0.38), rgba(255,122,198,0.1)); }
+  .stat-val { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat-lab { font-size: 12.5px; color: var(--ink-dim); margin-top: 2px; }
+  .stat-delta {
+    margin-left: auto; align-self: flex-start;
+    font-size: 11.5px; padding: 4px 9px; border-radius: 999px;
+    color: #7dffb8; background: rgba(90, 255, 170, 0.12);
+    border: 1px solid rgba(90, 255, 170, 0.28);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- 音乐播放器 ---------- */
+  .player-wrap { display: flex; flex-direction: column; }
+  .player-main { display: flex; align-items: center; gap: 22px; }
+  .disc {
+    width: 104px; height: 104px; border-radius: 50%; flex: none;
+    background:
+      radial-gradient(circle at 32% 28%, rgba(255,255,255,0.35), transparent 38%),
+      conic-gradient(from 200deg, var(--violet), var(--cyan), var(--pink), #5b3df0, var(--violet));
+    display: grid; place-items: center;
+    box-shadow: 0 10px 30px rgba(91, 61, 240, 0.45), inset 0 1px 0 rgba(255,255,255,0.5);
+    position: relative;
+  }
+  .disc::after {
+    content: ""; width: 26px; height: 26px; border-radius: 50%;
+    background: #141830;
+    box-shadow: inset 0 0 0 3px rgba(255,255,255,0.35);
+  }
+  .disc::before {
+    content: ""; position: absolute; inset: -7px;
+    border-radius: 50%;
+    border: 1px dashed rgba(255,255,255,0.28);
+    animation: spin 14s linear infinite;
+    animation-play-state: paused;
+  }
+  .player.playing .disc::before { animation-play-state: running; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .track-info { min-width: 0; flex: 1; }
+  .track-name { font-size: 19px; font-weight: 700; }
+  .track-artist { font-size: 13px; color: var(--ink-dim); margin-top: 4px; }
+  .track-tags { display: flex; gap: 6px; margin-top: 10px; }
+  .tag {
+    font-size: 10.5px; padding: 3px 9px; border-radius: 999px;
+    color: #c9d4ff; background: rgba(139, 150, 255, 0.13);
+    border: 1px solid rgba(139, 150, 255, 0.3);
+  }
+  .live-pill {
+    margin-left: auto; display: flex; align-items: center; gap: 7px;
+    font-size: 11px; color: var(--ink-faint);
+  }
+  .eq { display: flex; align-items: flex-end; gap: 3px; height: 16px; }
+  .eq i {
+    width: 3px; border-radius: 2px;
+    background: linear-gradient(var(--cyan), var(--violet));
+    animation: eq 1s ease-in-out infinite;
+  }
+  .eq i:nth-child(1) { height: 60%; animation-delay: 0s; }
+  .eq i:nth-child(2) { height: 100%; animation-delay: 0.2s; }
+  .eq i:nth-child(3) { height: 45%; animation-delay: 0.4s; }
+  .eq i:nth-child(4) { height: 80%; animation-delay: 0.15s; }
+  @keyframes eq { 0%, 100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }
+
+  .progress-row { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+  .time { font-size: 11.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+  .bar { flex: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.1); overflow: hidden; cursor: pointer; }
+  .bar-fill {
+    height: 100%; width: 28%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--violet), var(--cyan));
+    box-shadow: 0 0 12px rgba(65, 216, 255, 0.7);
+  }
+
+  .controls { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 18px; }
+  .ctrl-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.14);
+    color: var(--ink-dim);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .ctrl-btn:hover { color: #fff; background: rgba(255,255,255,0.13); transform: scale(1.06); }
+  .ctrl-btn svg { width: 18px; height: 18px; fill: currentColor; }
+  .play-btn {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, var(--violet), var(--cyan));
+    border: none; color: #fff;
+    box-shadow: 0 8px 24px rgba(110, 120, 255, 0.5), inset 0 1px 0 rgba(255,255,255,0.5);
+  }
+  .play-btn:hover { background: linear-gradient(135deg, #9a7fff, #63e2ff); }
+  .play-btn svg { width: 22px; height: 22px; }
+  .pause-icon { display: none; }
+  .player.playing .pause-icon { display: block; }
+  .player.playing .play-icon { display: none; }
+
+  .volume { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+  .volume svg { width: 15px; height: 15px; stroke: var(--ink-faint); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .volume input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    flex: 1; height: 4px; border-radius: 999px;
+    background: linear-gradient(90deg, var(--pink) var(--v, 60%), rgba(255,255,255,0.12) var(--v, 60%));
+    outline: none;
+  }
+  .volume input::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: #fff; box-shadow: 0 0 0 4px rgba(255,255,255,0.18), 0 2px 8px rgba(0,0,0,0.4);
+    cursor: pointer;
+  }
+
+  /* ---------- 天气 ---------- */
+  .weather-top { display: flex; align-items: flex-start; gap: 18px; }
+  .weather-emoji {
+    font-size: 58px; line-height: 1;
+    filter: drop-shadow(0 8px 22px rgba(255, 190, 90, 0.35));
+  }
+  .temp { font-size: 52px; font-weight: 700; letter-spacing: -1px; }
+  .temp sup { font-size: 22px; font-weight: 600; color: var(--ink-dim); }
+  .weather-desc { font-size: 14px; color: var(--ink-dim); margin-top: 4px; }
+  .weather-loc { font-size: 12px; color: var(--ink-faint); margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+  .weather-loc svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .forecast { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 22px; }
+  .f-day {
+    text-align: center; padding: 12px 6px; border-radius: 16px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.09);
+    transition: all 0.25s ease; cursor: default;
+  }
+  .f-day:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); }
+  .f-day .d { font-size: 11px; color: var(--ink-faint); margin-bottom: 6px; }
+  .f-day .e { font-size: 20px; }
+  .f-day .t { font-size: 12.5px; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .f-day .t span { color: var(--ink-faint); margin-left: 4px; font-size: 11px; }
+
+  /* ---------- 周活跃柱状图 ---------- */
+  .chart { display: flex; align-items: flex-end; gap: 12px; height: 150px; margin-top: 8px; }
+  .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
+  .chart-bar {
+    width: 100%; max-width: 38px;
+    border-radius: 10px 10px 4px 4px;
+    background: linear-gradient(180deg, var(--cyan), rgba(139,108,255,0.55));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 0 14px rgba(65,216,255,0.25);
+    position: relative;
+    transform-origin: bottom;
+    animation: grow 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+    transition: filter 0.25s ease;
+  }
+  .chart-col:nth-child(1) .chart-bar { animation-delay: 0.05s; }
+  .chart-col:nth-child(2) .chart-bar { animation-delay: 0.12s; }
+  .chart-col:nth-child(3) .chart-bar { animation-delay: 0.19s; }
+  .chart-col:nth-child(4) .chart-bar { animation-delay: 0.26s; }
+  .chart-col:nth-child(5) .chart-bar { animation-delay: 0.33s; }
+  .chart-col:nth-child(6) .chart-bar { animation-delay: 0.4s; }
+  .chart-col:nth-child(7) .chart-bar { animation-delay: 0.47s; }
+  .chart-bar:hover { filter: brightness(1.35); }
+  .chart-bar::after {
+    content: attr(data-h);
+    position: absolute; top: -24px; left: 50%; transform: translateX(-50%);
+    font-size: 10.5px; color: var(--ink-dim);
+    opacity: 0; transition: opacity 0.2s ease;
+    font-variant-numeric: tabular-nums;
+  }
+  .chart-bar:hover::after { opacity: 1; }
+  @keyframes grow { from { transform: scaleY(0); } }
+  .chart-day { font-size: 11px; color: var(--ink-faint); }
+
+  /* ---------- 待办 ---------- */
+  .todo { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .todo li { display: flex; align-items: center; gap: 13px; }
+  .todo label {
+    flex: 1; display: flex; align-items: center; gap: 13px;
+    padding: 12px 14px; border-radius: 14px; cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  .todo label:hover { background: rgba(255,255,255,0.06); }
+  .todo input { display: none; }
+  .check {
+    width: 21px; height: 21px; border-radius: 8px; flex: none;
+    border: 1.5px solid rgba(255,255,255,0.3);
+    display: grid; place-items: center;
+    transition: all 0.25s ease;
+    background: rgba(255,255,255,0.05);
+  }
+  .check svg { width: 12px; height: 12px; stroke: #fff; fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transform: scale(0.4); transition: all 0.2s ease; }
+  .todo input:checked + .check {
+    background: linear-gradient(135deg, var(--violet), var(--cyan));
+    border-color: transparent;
+    box-shadow: 0 3px 10px rgba(110, 120, 255, 0.45);
+  }
+  .todo input:checked + .check svg { opacity: 1; transform: scale(1); }
+  .todo .txt { font-size: 14px; transition: all 0.25s ease; }
+  .todo input:checked ~ .txt { color: var(--ink-faint); text-decoration: line-through; text-decoration-color: rgba(255,255,255,0.4); }
+  .todo .prio { margin-left: auto; font-size: 10px; padding: 3px 8px; border-radius: 999px; letter-spacing: 0.5px; }
+  .p-hi { color: #ff9db4; background: rgba(255, 120, 160, 0.13); border: 1px solid rgba(255, 120, 160, 0.3); }
+  .p-md { color: #ffd9a0; background: rgba(255, 190, 100, 0.13); border: 1px solid rgba(255, 190, 100, 0.3); }
+  .p-lo { color: #9fd9ff; background: rgba(100, 190, 255, 0.13); border: 1px solid rgba(100, 190, 255, 0.3); }
+  .todo-add {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 12px; padding: 11px 14px;
+    border-radius: 14px;
+    color: var(--ink-faint); font-size: 13.5px; cursor: pointer;
+    border: 1px dashed rgba(255,255,255,0.22);
+    transition: all 0.2s ease;
+  }
+  .todo-add:hover { color: var(--ink); border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.04); }
+
+  /* ---------- 响应式 ---------- */
+  @media (max-width: 980px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; flex-direction: row; align-items: center; padding: 16px; }
+    .nav { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+    .nav-item { padding: 10px 13px; font-size: 13px; }
+    .user { display: none; }
+    .logo { padding: 0 10px 0 0; }
+    .topbar { flex-wrap: wrap; }
+    .search { order: 3; width: 100%; margin-left: 0; }
+    .span-4, .span-5, .span-7 { grid-column: 1 / -1; }
+    .player-main { flex-wrap: wrap; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="aurora" aria-hidden="true">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+  <div class="blob b4"></div>
+</div>
+<div class="noise" aria-hidden="true"></div>
+
+<div class="layout">
+
+  <!-- ============ 侧边栏 ============ -->
+  <aside class="sidebar glass">
+    <div class="logo">
+      <div class="logo-mark">💧</div>
+      <div>
+        <div class="logo-name">Liquid Glass</div>
+        <div class="logo-sub">UI CONCEPT</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a class="nav-item active" href="#">
+        <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/></svg>
+        首页
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24"><circle cx="8" cy="17" r="3"/><circle cx="17" cy="15" r="3"/><path d="M11 17V6.5l6-1.5V15"/></svg>
+        音乐
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m9 12 2.2 2.2L15.5 10"/></svg>
+        任务
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+        数据
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24"><path d="M5 7h9"/><path d="M17.5 7H19"/><circle cx="15.5" cy="7" r="2"/><path d="M5 17h3"/><path d="M12.5 17H19"/><circle cx="9.5" cy="17" r="2"/></svg>
+        设置
+      </a>
+    </nav>
+    <div class="user">
+      <div class="avatar">🦈</div>
+      <div>
+        <div class="user-name">深海小鲸</div>
+        <div class="user-plan">Liquid 会员</div>
+      </div>
+      <span class="user-badge">PRO</span>
+    </div>
+  </aside>
+
+  <!-- ============ 主内容 ============ -->
+  <main class="content">
+
+    <!-- 顶栏 -->
+    <header class="topbar glass">
+      <div class="greet" id="greet">晚上好<b id="greet-name">今天也闪闪发光 ✨</b>
+        <div class="date-line" id="date-line"></div>
+      </div>
+      <div class="search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" placeholder="搜索音乐、任务或数据…">
+        <kbd>⌘ K</kbd>
+      </div>
+      <div class="clock">
+        <div class="clock-time" id="clock">--:--:--</div>
+        <div class="clock-zone">GMT+8 · 本地时间</div>
+      </div>
+    </header>
+
+    <!-- 统计行 -->
+    <div class="grid">
+      <div class="card glass span-4">
+        <h3>今日专注</h3>
+        <div class="stat">
+          <div class="stat-icon ic-violet">🧠</div>
+          <div>
+            <div class="stat-val">4h 32m</div>
+            <div class="stat-lab">深度工作 · 6 个番茄钟</div>
+          </div>
+          <span class="stat-delta">↑ 18%</span>
+        </div>
+      </div>
+      <div class="card glass span-4">
+        <h3>今日步数</h3>
+        <div class="stat">
+          <div class="stat-icon ic-cyan">👟</div>
+          <div>
+            <div class="stat-val">8,642</div>
+            <div class="stat-lab">目标 10,000 步</div>
+          </div>
+          <span class="stat-delta">↑ 6%</span>
+        </div>
+      </div>
+      <div class="card glass span-4">
+        <h3>饮水进度</h3>
+        <div class="stat">
+          <div class="stat-icon ic-pink">🥤</div>
+          <div>
+            <div class="stat-val">6 / 8 杯</div>
+            <div class="stat-lab">还剩 2 杯达标</div>
+          </div>
+          <span class="stat-delta">75%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 播放器 + 天气 -->
+    <div class="grid">
+      <div class="card glass span-7 player" id="player">
+        <h3>正在播放</h3>
+        <div class="player-wrap">
+          <div class="player-main">
+            <div class="disc">🌊</div>
+            <div class="track-info">
+              <div class="track-name">深海电波</div>
+              <div class="track-artist">Liquid Dreams · 专辑《玻璃海》</div>
+              <div class="track-tags">
+                <span class="tag">Chillwave</span>
+                <span class="tag">Lo-fi</span>
+                <span class="tag">320k</span>
+              </div>
+            </div>
+            <div class="live-pill">
+              <span class="eq"><i></i><i></i><i></i><i></i></span>
+              实时音浪
+            </div>
+          </div>
+
+          <div class="progress-row">
+            <span class="time" id="t-now">0:00</span>
+            <div class="bar"><div class="bar-fill" id="bar-fill"></div></div>
+            <span class="time">3:42</span>
+          </div>
+
+          <div class="controls">
+            <button class="ctrl-btn" title="上一首" aria-label="上一首">
+              <svg viewBox="0 0 24 24"><path d="M7 5v14M19 6.5v11L11 12l8-5.5z"/></svg>
+            </button>
+            <button class="ctrl-btn play-btn" id="play-btn" title="播放/暂停" aria-label="播放/暂停">
+              <svg class="play-icon" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5-11-6.5z"/></svg>
+              <svg class="pause-icon" viewBox="0 0 24 24"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></svg>
+            </button>
+            <button class="ctrl-btn" title="下一首" aria-label="下一首">
+              <svg viewBox="0 0 24 24"><path d="M17 5v14M5 6.5v11l8-5.5-8-5.5z"/></svg>
+            </button>
+          </div>
+
+          <div class="volume">
+            <svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4.5v-15L8 9H4z"/></svg>
+            <input type="range" min="0" max="100" value="60" id="vol" aria-label="音量">
+            <svg viewBox="0 0 24 24"><path d="M18 9v6h3.5v-6H18z"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="card glass span-5">
+        <h3>天气 · 上海</h3>
+        <div class="weather-top">
+          <div class="weather-emoji">⛅</div>
+          <div>
+            <div class="temp">23<sup>°C</sup></div>
+            <div class="weather-desc">多云转晴 · 体感 25°</div>
+            <div class="weather-loc">
+              <svg viewBox="0 0 24 24"><path d="M12 21s-7-5.2-7-11a7 7 0 0 1 14 0c0 5.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              黄浦区 · 空气优 · 湿度 62%
+            </div>
+          </div>
+        </div>
+        <div class="forecast">
+          <div class="f-day"><div class="d">周四</div><div class="e">☀️</div><div class="t">25° <span>19°</span></div></div>
+          <div class="f-day"><div class="d">周五</div><div class="e">⛅</div><div class="t">23° <span>18°</span></div></div>
+          <div class="f-day"><div class="d">周六</div><div class="e">🌧️</div><div class="t">20° <span>16°</span></div></div>
+          <div class="f-day"><div class="d">周日</div><div class="e">🌤️</div><div class="t">24° <span>18°</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 图表 + 待办 -->
+    <div class="grid">
+      <div class="card glass span-5">
+        <h3>本周活跃</h3>
+        <div class="chart">
+          <div class="chart-col"><div class="chart-bar" style="height:42%" data-h="2.1h"></div><div class="chart-day">一</div></div>
+          <div class="chart-col"><div class="chart-bar" style="height:66%" data-h="3.3h"></div><div class="chart-day">二</div></div>
+          <div class="chart-col"><div class="chart-bar" style="height:52%" data-h="2.6h"></div><div class="chart-day">三</div></div>
+          <div class="chart-col"><div class="chart-bar" style="height:88%" data-h="4.4h"></div><div class="chart-day">四</div></div>
+          <div class="chart-col"><div class="chart-bar" style="height:74%" data-h="3.7h"></div><div class="chart-day">五</div></div>
+          <div class="chart-col"><div class="chart-bar" style="height:100%" data-h="5.0h"></div><div class="chart-day">六</div></div>
+          <div class="chart-col"><div class="chart-bar" style="height:80%" data-h="4.0h"></div><div class="chart-day">日</div></div>
+        </div>
+      </div>
+
+      <div class="card glass span-7">
+        <h3>今日待办 · 3 / 5</h3>
+        <ul class="todo">
+          <li>
+            <label>
+              <input type="checkbox" checked>
+              <span class="check"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
+              <span class="txt">完成液态玻璃 UI 概念稿</span>
+              <span class="prio p-hi">高</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" checked>
+              <span class="check"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
+              <span class="txt">晨间冥想 15 分钟</span>
+              <span class="prio p-lo">低</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" checked>
+              <span class="check"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
+              <span class="txt">给绿植浇水 &amp; 拍照记录</span>
+              <span class="prio p-md">中</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox">
+              <span class="check"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
+              <span class="txt">回复设计评审邮件</span>
+              <span class="prio p-hi">高</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox">
+              <span class="check"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
+              <span class="txt">夜跑 5 公里</span>
+              <span class="prio p-md">中</span>
+            </label>
+          </li>
+        </ul>
+        <div class="todo-add">＋ 添加新任务</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // ---------- 时钟 & 问候 ----------
+  const clockEl = document.getElementById('clock');
+  const dateEl = document.getElementById('date-line');
+  const greetEl = document.getElementById('greet');
+  const week = ['日','一','二','三','四','五','六'];
+
+  function tick() {
+    const now = new Date();
+    const p = n => String(n).padStart(2, '0');
+    clockEl.textContent = p(now.getHours()) + ':' + p(now.getMinutes()) + ':' + p(now.getSeconds());
+    dateEl.textContent = now.getFullYear() + ' 年 ' + (now.getMonth() + 1) + ' 月 ' + now.getDate() + ' 日 · 星期' + week[now.getDay()];
+
+    const h = now.getHours();
+    let word = '晚上好';
+    if (h < 5) word = '夜深了';
+    else if (h < 9) word = '早上好';
+    else if (h < 12) word = '上午好';
+    else if (h < 14) word = '中午好';
+    else if (h < 18) word = '下午好';
+    greetEl.firstChild.textContent = word + '，';
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  // ---------- 播放器 ----------
+  const player = document.getElementById('player');
+  const playBtn = document.getElementById('play-btn');
+  const barFill = document.getElementById('bar-fill');
+  const timeNow = document.getElementById('t-now');
+  const TOTAL = 222; // 3:42 = 222s
+  let progress = 62; // 起始进度（秒）
+
+  function fmt(s) {
+    const m = Math.floor(s / 60), ss = Math.floor(s % 60);
+    return m + ':' + String(ss).padStart(2, '0');
+  }
+  function render() {
+    barFill.style.width = (progress / TOTAL * 100) + '%';
+    timeNow.textContent = fmt(progress);
+  }
+
+  playBtn.addEventListener('click', () => {
+    player.classList.toggle('playing');
+  });
+
+  setInterval(() => {
+    if (player.classList.contains('playing')) {
+      progress += 0.25;
+      if (progress >= TOTAL) progress = 0;
+      render();
+    }
+  }, 250);
+
+  // 点击进度条跳转
+  document.querySelector('.bar').addEventListener('click', e => {
+    const r = e.currentTarget.getBoundingClientRect();
+    progress = Math.min(TOTAL, Math.max(0, (e.clientX - r.left) / r.width * TOTAL));
+    render();
+  });
+
+  // ---------- 音量 ----------
+  const vol = document.getElementById('vol');
+  vol.addEventListener('input', () => vol.style.setProperty('--v', vol.value + '%'));
+  vol.style.setProperty('--v', '60%');
+
+  // ---------- 待办计数 ----------
+  const boxes = document.querySelectorAll('.todo input');
+  const todoTitle = document.querySelector('.card.span-7 h3');
+  function countTodo() {
+    const done = Array.from(boxes).filter(b => b.checked).length;
+    todoTitle.textContent = '今日待办 · ' + done + ' / ' + boxes.length;
+  }
+  boxes.forEach(b => b.addEventListener('change', countTodo));
+  countTodo();
+
+  render();
+</script>
+</body>
+</html>
