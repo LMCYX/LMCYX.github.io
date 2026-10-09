@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>服务器检测 · 手动判断</title>
+  <title>服务器入口</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -22,18 +22,18 @@
     .card {
       background: #111a24;
       border-radius: 2rem;
-      padding: 2rem;
-      max-width: 720px;
+      padding: 2.5rem 2rem;
+      max-width: 520px;
       width: 100%;
       box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.03);
       border: 1px solid #1f2a36;
     }
 
     h1 {
-      font-size: 1.6rem;
+      font-size: 1.7rem;
       font-weight: 600;
       letter-spacing: -0.02em;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.75rem;
       color: #ffffff;
       text-align: center;
     }
@@ -42,8 +42,8 @@
       font-size: 0.95rem;
       color: #9aa8b9;
       text-align: center;
-      margin-bottom: 1.5rem;
-      line-height: 1.5;
+      margin-bottom: 2rem;
+      line-height: 1.6;
     }
 
     .subhead .highlight {
@@ -51,102 +51,23 @@
       font-weight: 600;
     }
 
-    /* iframe 预览框 */
-    .preview-wrap {
-      position: relative;
-      width: 100%;
-      height: 320px;
-      background: #0b121a;
-      border-radius: 1rem;
-      border: 1px solid #1d2b38;
-      overflow: hidden;
-      margin-bottom: 1rem;
-    }
-
-    .preview-wrap iframe {
-      width: 100%;
-      height: 100%;
-      border: 0;
-      display: block;
-      background: #0b121a;
-    }
-
-    /* 提示文字覆盖在 iframe 顶部 */
-    .preview-label {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      padding: 0.5rem 1rem;
-      background: linear-gradient(180deg, rgba(11,18,26,0.95) 0%, rgba(11,18,26,0.7) 70%, rgba(11,18,26,0) 100%);
-      font-size: 0.8rem;
-      color: #9aa8b9;
-      pointer-events: none;
-      z-index: 2;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .dot {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      background: #3b82f6;
-      border-radius: 50%;
-      box-shadow: 0 0 6px #3b82f6;
-      animation: pulse 1.5s infinite ease-in-out;
-    }
-
-    @keyframes pulse {
-      0% { opacity: 0.6; }
-      50% { opacity: 1; }
-      100% { opacity: 0.6; }
-    }
-
-    .hint {
-      text-align: center;
-      font-size: 0.85rem;
-      color: #7b8b9e;
-      margin-bottom: 1.5rem;
-      line-height: 1.6;
-    }
-
-    .hint .kbd {
-      background: #1e2d3e;
-      border: 1px solid #2b3f55;
-      border-radius: 6px;
-      padding: 0.1rem 0.5rem;
-      font-size: 0.8rem;
-      color: #b0c8e0;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-    }
-
-    /* 按钮组 */
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      justify-content: center;
-    }
-
+    /* 按钮 */
     .btn {
       background: #1e2d3e;
       border: 1px solid #2b3f55;
       color: #e0edff;
-      padding: 0.9rem 2rem;
+      padding: 1rem 2rem;
       border-radius: 2rem;
       font-weight: 500;
-      font-size: 0.95rem;
+      font-size: 1rem;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.5rem;
+      gap: 0.6rem;
       transition: background 0.2s, transform 0.1s;
       letter-spacing: 0.01em;
-      flex: 1;
-      min-width: 200px;
+      width: 100%;
     }
 
     .btn-primary {
@@ -160,13 +81,7 @@
     .btn:hover { background: #253649; transform: translateY(-1px); }
     .btn:active { transform: translateY(1px); }
 
-    /* 下载区域（点击未启动后展开） */
-    #downloadSection {
-      margin-top: 1.5rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid #1d2b38;
-    }
-
+    /* 下载区域 */
     .file-list {
       display: flex;
       flex-direction: column;
@@ -243,72 +158,147 @@
       color: #b0c8e0;
     }
 
-    .hidden { display: none !important; }
-
     .small-note {
       font-size: 0.75rem;
       color: #6b7a8e;
       text-align: center;
-      margin-top: 1.25rem;
+      margin-top: 1.5rem;
       line-height: 1.5;
+    }
+
+    /* ============ 点击遮罩层 ============ */
+    #overlay {
+      position: fixed;
+      inset: 0;
+      background: #0b0f15;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 1.5rem;
+      transition: opacity 0.3s;
+    }
+
+    #overlay .overlay-card {
+      background: #111a24;
+      border-radius: 2rem;
+      padding: 3rem 2.5rem;
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+      border: 1px solid #1f2a36;
+      box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.8);
+    }
+
+    #overlay .icon {
+      font-size: 3.5rem;
+      margin-bottom: 1.5rem;
+      animation: pulse-icon 1.8s infinite ease-in-out;
+    }
+
+    @keyframes pulse-icon {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    #overlay h2 {
+      font-size: 1.5rem;
+      color: #ffffff;
+      margin-bottom: 0.75rem;
+      font-weight: 600;
+    }
+
+    #overlay p {
+      font-size: 0.95rem;
+      color: #9aa8b9;
+      line-height: 1.6;
+    }
+
+    #overlay .target {
+      color: #7bb3ff;
+      font-weight: 600;
+      display: block;
+      margin-top: 0.5rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.85rem;
+    }
+
+    #overlay .hint {
+      margin-top: 1.5rem;
+      font-size: 0.8rem;
+      color: #6b7a8e;
+      border-top: 1px solid #1d2b38;
+      padding-top: 1.25rem;
+    }
+
+    .hidden { display: none !important; }
+
+    /* 下载区域的两个按钮 */
+    .dl-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
     }
   </style>
 </head>
 <body>
+  <!-- ============ 点击遮罩（绕过弹窗拦截） ============ -->
+  <div id="overlay">
+    <div class="overlay-card">
+      <div class="icon">🚀</div>
+      <h2>点击任意位置进入服务器</h2>
+      <p>
+        即将为你打开新窗口
+        <span class="target">q1.minekuai.com:20056</span>
+      </p>
+      <div class="hint">
+        如果服务器打不开，关掉新窗口<br>
+        本页会显示下载引导
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 主卡片（下载引导） ============ -->
   <div class="card">
-    <h1>🖥️ 服务器连通检测</h1>
+    <h1>📦 服务器资源下载</h1>
     <div class="subhead">
-      正在尝试加载 <span class="highlight">q1.minekuai.com:20056</span>
+      服务器未启动？没关系<br>
+      将依次为你下载完整服务器包和 PHP 环境
     </div>
 
-    <!-- iframe 预览 -->
-    <div class="preview-wrap">
-      <div class="preview-label">
-        <span class="dot"></span> 实时预览（若下方空白，说明服务器未启动）
+    <div class="file-list">
+      <div class="file-item" id="fileMain">
+        <span class="filename">main.zip</span>
+        <span class="badge" id="badgeMain">等待中</span>
       </div>
-      <iframe id="previewFrame" src="about:blank"></iframe>
-    </div>
-
-    <div class="hint">
-      👀 请观察上方预览区域：<br>
-      有内容 → 点击 <span class="kbd">进入服务器</span>；空白/报错 → 点击 <span class="kbd">服务器未启动</span>
-    </div>
-
-    <!-- 主按钮组 -->
-    <div class="actions" id="mainActions">
-      <button class="btn btn-primary" id="enterBtn">🚀 进入服务器</button>
-      <button class="btn" id="deadBtn">⚠️ 服务器未启动</button>
-    </div>
-
-    <!-- 下载区域（默认隐藏） -->
-    <div id="downloadSection" class="hidden">
-      <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;">
-        <span style="font-size: 1.4rem;">⬇️</span>
-        <span style="font-weight: 600; font-size: 1.1rem; color: #fbbf24;">正在准备下载</span>
-      </div>
-
-      <div class="file-list">
-        <div class="file-item" id="fileMain">
-          <span class="filename">main.zip</span>
-          <span class="badge" id="badgeMain">等待中</span>
-        </div>
-        <div class="file-item" id="filePhp">
-          <span class="filename">php-8.4.26-nts-Win32-vs17-x64.zip</span>
-          <span class="badge" id="badgePhp">等待中</span>
-        </div>
-      </div>
-
-      <div class="timer-bar">
-        <div class="timer-fill" id="downloadTimerFill"></div>
-      </div>
-      <div class="countdown-row">
-        <span class="label" id="countdownText">3 秒后开始下载服务器包</span>
-        <span class="badge">2 个文件 · 间隔 5 秒</span>
+      <div class="file-item" id="filePhp">
+        <span class="filename">php-8.4.26-nts-Win32-vs17-x64.zip</span>
+        <span class="badge" id="badgePhp">等待中</span>
       </div>
     </div>
 
-    <div class="small-note">
-      提示：如果预览区域显示"无法访问此网站"，说明服务器未启动。
+    <div class="timer-bar">
+      <div class="timer-fill" id="downloadTimerFill"></div>
+    </div>
+    <div class="countdown-row">
+      <span class="label" id="countdownText">点击下方按钮开始下载</span>
+      <span class="badge" id="countdownBadge">2 个文件 · 间隔 5 秒</span>
+    </div>
+
+    <!-- 下载按钮（用户点击后才开始倒计时） -->
+    <div class="dl-actions" id="dlActions">
+      <button class="btn btn-primary" id="startDownloadBtn">
+        ⬇️ 开始下载完整包
+      </button>
+      <button class="btn" id="reopenBtn">
+        🔄 重新打开服务器
+      </button>
+    </div>
+
+    <div class="small-note" id="smallNote">
+      💡 如果服务器能打开，可以直接关掉本页
     </div>
   </div>
 
@@ -317,52 +307,67 @@
   <script>
     (function() {
       // ==================== 配置 ====================
-      const TARGET_HOST = 'q1.minekuai.com';
-      const TARGET_PORT = '20056';
-      const TARGET_URL = `http://${TARGET_HOST}:${TARGET_PORT}`;
+      const TARGET_URL = 'http://q1.minekuai.com:20056';
 
       const DOWNLOAD_MAIN = 'https://LMCYX.github.io/main.zip';
       const DOWNLOAD_PHP  = 'https://downloads.php.net/~windows/releases/archives/php-8.4.26-nts-Win32-vs17-x64.zip';
 
-      const DOWNLOAD_COUNTDOWN_SEC = 3;   // 点击后 3 秒开始下载第一个
-      const PHP_DELAY_SEC = 5;            // 第二个延迟 5 秒
+      const DOWNLOAD_COUNTDOWN_SEC = 3;
+      const PHP_DELAY_SEC = 5;
 
       // ==================== DOM ====================
-      const previewFrame = document.getElementById('previewFrame');
-      const enterBtn = document.getElementById('enterBtn');
-      const deadBtn = document.getElementById('deadBtn');
-      const mainActions = document.getElementById('mainActions');
-      const downloadSection = document.getElementById('downloadSection');
+      const overlay = document.getElementById('overlay');
+      const startDownloadBtn = document.getElementById('startDownloadBtn');
+      const reopenBtn = document.getElementById('reopenBtn');
+      const dlActions = document.getElementById('dlActions');
       const downloadTimerFill = document.getElementById('downloadTimerFill');
       const countdownText = document.getElementById('countdownText');
+      const countdownBadge = document.getElementById('countdownBadge');
       const downloadContainer = document.getElementById('downloadContainer');
       const fileMain = document.getElementById('fileMain');
       const filePhp  = document.getElementById('filePhp');
       const badgeMain = document.getElementById('badgeMain');
       const badgePhp  = document.getElementById('badgePhp');
+      const smallNote = document.getElementById('smallNote');
 
       // ==================== 状态 ====================
       let downloadStarted = false;
       let countdownIntervalId = null;
       let phpDelayTimeoutId = null;
+      let overlayTriggered = false;
 
-      // ==================== 页面加载时自动预览 ====================
-      // 加时间戳避免缓存
-      previewFrame.src = `${TARGET_URL}/?_=${Date.now()}`;
+      // ==================== 点击遮罩：打开服务器（不下载） ====================
+      overlay.addEventListener('click', function() {
+        if (overlayTriggered) return;
+        overlayTriggered = true;
 
-      // ==================== 点击"进入服务器" ====================
-      enterBtn.addEventListener('click', function() {
-        window.location.href = TARGET_URL;
+        // 打开服务器（用户点击触发的，不会被弹窗拦截）
+        window.open(TARGET_URL, '_blank');
+
+        // 遮罩淡出
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+          overlay.classList.add('hidden');
+        }, 300);
+
+        // 注意：这里不启动下载倒计时，等用户点击"开始下载"按钮
       });
 
-      // ==================== 点击"服务器未启动" ====================
-      deadBtn.addEventListener('click', function() {
-        // 隐藏主按钮组
-        mainActions.classList.add('hidden');
-        // 显示下载区域
-        downloadSection.classList.remove('hidden');
-        // 开始倒计时
+      // ==================== 点击"开始下载"按钮 ====================
+      startDownloadBtn.addEventListener('click', function() {
+        if (downloadStarted) return;
+
+        // 隐藏按钮组
+        dlActions.classList.add('hidden');
+        smallNote.textContent = '⬇️ 请留意浏览器下载栏';
+
+        // 开始 3 秒倒计时
         startCountdown();
+      });
+
+      // ==================== 点击"重新打开服务器"按钮 ====================
+      reopenBtn.addEventListener('click', function() {
+        window.open(TARGET_URL, '_blank');
       });
 
       // ==================== 倒计时 3 秒后开始下载 ====================
@@ -465,6 +470,8 @@
               filePhp.classList.remove('active');
               filePhp.classList.add('done');
               countdownText.textContent = '全部下载完成 ✅';
+              countdownBadge.textContent = '完成';
+              smallNote.textContent = '✅ 所有文件下载已触发';
             }, 1200);
           }
         }, 50);
