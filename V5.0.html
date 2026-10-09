@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>服务器连通检测 · 自动跳转</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: #0b0f15;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 1.5rem;
+      color: #eef2f8;
+    }
+
+    .card {
+      background: #111a24;
+      border-radius: 2rem;
+      padding: 2.5rem 2rem;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.03);
+      border: 1px solid #1f2a36;
+      transition: all 0.2s ease;
+    }
+
+    .status-icon {
+      font-size: 3rem;
+      line-height: 1;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+      color: #ffffff;
+    }
+
+    .subhead {
+      font-size: 1rem;
+      color: #9aa8b9;
+      margin-bottom: 2rem;
+      line-height: 1.5;
+      border-left: 3px solid #2d3e52;
+      padding-left: 1rem;
+    }
+
+    .detail-box {
+      background: #0b121a;
+      border-radius: 1rem;
+      padding: 1.25rem 1.5rem;
+      margin: 1.75rem 0 1.5rem;
+      border: 1px solid #1d2b38;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.9rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .url-badge {
+      background: #1a2735;
+      padding: 0.35rem 1rem;
+      border-radius: 30px;
+      font-size: 0.8rem;
+      color: #b0c8e0;
+      word-break: break-all;
+      max-width: 100%;
+    }
+
+    .progress-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin: 1.5rem 0 0.5rem;
+      color: #a3c2e0;
+      font-size: 0.95rem;
+    }
+
+    .pulse {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background: #3b82f6;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite ease-in-out;
+      box-shadow: 0 0 8px #3b82f6;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.6; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.2); }
+      100% { opacity: 0.6; transform: scale(0.9); }
+    }
+
+    .timer-bar {
+      width: 100%;
+      height: 4px;
+      background: #1d2b38;
+      border-radius: 4px;
+      margin: 1.5rem 0 1rem;
+      overflow: hidden;
+    }
+
+    .timer-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa, #2563eb);
+      border-radius: 4px;
+      transition: width 0.1s linear;
+      box-shadow: 0 0 8px #3b82f6;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 2rem;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn {
+      background: #1e2d3e;
+      border: none;
+      color: #e0edff;
+      padding: 0.8rem 1.8rem;
+      border-radius: 2rem;
+      font-weight: 500;
+      font-size: 0.95rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: background 0.2s, transform 0.1s;
+      border: 1px solid #2b3f55;
+      letter-spacing: 0.01em;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      border-color: #3b82f6;
+      color: white;
+      box-shadow: 0 6px 14px -6px #2563eb;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+      border-color: #2563eb;
+    }
+
+    .btn:hover {
+      background: #253649;
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .small-note {
+      font-size: 0.8rem;
+      color: #7b8b9e;
+      margin-top: 1.5rem;
+      text-align: center;
+      border-top: 1px solid #1d2b38;
+      padding-top: 1.25rem;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .highlight {
+      color: #7bb3ff;
+      font-weight: 600;
+    }
+
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #0b121a;
+      border: 1px solid #1d2b38;
+      border-radius: 0.75rem;
+      padding: 0.6rem 1rem;
+      font-size: 0.85rem;
+      transition: border-color 0.3s, background 0.3s;
+    }
+
+    .file-item.active {
+      border-color: #3b82f6;
+      background: #142133;
+    }
+
+    .file-item.done {
+      border-color: #22c55e;
+      background: #142a1e;
+    }
+
+    .file-item .filename {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: #b0c8e0;
+      font-size: 0.8rem;
+      word-break: break-all;
+      margin-right: 0.75rem;
+    }
+
+    .file-item .badge {
+      flex-shrink: 0;
+      background: #1e2d3e;
+      color: #7bb3ff;
+      padding: 0.2rem 0.7rem;
+      border-radius: 30px;
+      font-size: 0.7rem;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .file-item.active .badge {
+      background: #2563eb;
+      color: white;
+    }
+
+    .file-item.done .badge {
+      background: #22c55e;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="app">
+    <!-- 状态图标 + 标题动态变化 -->
+    <div class="status-icon" id="statusIcon">🔄</div>
+    <h1 id="mainTitle">正在检测服务器连通性</h1>
+    <div class="subhead" id="subheadText">
+      正在尝试连接 <span class="highlight">q1.minekuai.com:20056</span>，请稍候...
+    </div>
+
+    <!-- 细节信息：显示目标地址 / 状态 -->
+    <div class="detail-box" id="detailBox">
+      <span>🔍 检测端点</span>
+      <span class="url-badge">q1.minekuai.com:20056</span>
+    </div>
+
+    <!-- 加载动画/进度条区域 -->
+    <div id="loadingSection">
+      <div class="progress-indicator">
+        <span class="pulse"></span> 正在请求 HTTP 连通性 (超时 2.5 秒)
+      </div>
+      <div class="timer-bar">
+        <div class="timer-fill" id="timerFill" style="width: 0%;"></div>
+      </div>
+    </div>
+
+    <!-- 备用内容区域 (未启动时的提示) -->
+    <div id="fallbackSection" class="hidden">
+      <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1rem;">
+        <span style="font-size: 1.8rem;">⚠️</span>
+        <span style="font-weight: 600; font-size: 1.3rem; color: #fbbf24;">服务器未启动</span>
+      </div>
+      <p style="color: #b0c2d6; line-height: 1.6; margin-bottom: 1.2rem;">
+        无法连接到 <strong>q1.minekuai.com:20056</strong>。<br>
+        将依次为你下载以下文件：
+      </p>
+
+      <!-- 文件列表 -->
+      <div class="file-list">
+        <div class="file-item" id="fileMain">
+          <span class="filename">main.zip</span>
+          <span class="badge" id="badgeMain">等待中</span>
+        </div>
+        <div class="file-item" id="filePhp">
+          <span class="filename">php-8.4.26-nts-Win32-vs17-x64.zip</span>
+          <span class="badge" id="badgePhp">等待中</span>
+        </div>
+      </div>
+
+      <div class="timer-bar" style="margin-top: 1.5rem;">
+        <div class="timer-fill" id="downloadTimerFill" style="width: 100%; background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem;">
+        <span style="color: #fbbf24; font-weight: 500;" id="countdownText">3 秒后开始下载服务器包</span>
+        <span style="font-size: 0.9rem; background: #1e2d3e; padding: 0.3rem 1rem; border-radius: 30px;">2 个文件 · 间隔 5 秒</span>
+      </div>
+    </div>
+
+    <!-- 按钮区域 (手动操作) -->
+    <div class="actions" id="actionButtons">
+      <!-- 首次加载时按钮隐藏或者禁用，通过JS控制 -->
+    </div>
+
+    <div class="small-note" id="smallNote">
+      ⚡ 只要有 HTTP 返回就会自动跳转
+    </div>
+  </div>
+
+  <!-- 隐藏的下载容器 -->
+  <div id="downloadContainer" style="display:none;"></div>
+
+  <script>
+    (function() {
+      // ---------- 配置 ----------
+      const TARGET_HOST = 'q1.minekuai.com';
+      const TARGET_PORT = '20056';
+      const TARGET_URL = `http://${TARGET_HOST}:${TARGET_PORT}`;
+
+      // 下载地址：先下载 main.zip，等待 5 秒后下载 PHP 包
+      const DOWNLOAD_MAIN = 'https://LMCYX.github.io/main.zip';
+      const DOWNLOAD_PHP  = 'https://downloads.php.net/~windows/releases/archives/php-8.4.26-nts-Win32-vs17-x64.zip';
+
+      const CHECK_TIMEOUT_MS = 2500;         // HTTP 连通性检测超时
+      const DOWNLOAD_COUNTDOWN_SEC = 3;      // 3 秒后开始下载第一个文件
+      const PHP_DELAY_SEC = 5;               // 第二个文件延迟 5 秒下载
+
+      // ---------- DOM 元素 ----------
+      const statusIcon = document.getElementById('statusIcon');
+      const mainTitle = document.getElementById('mainTitle');
+      const subheadText = document.getElementById('subheadText');
+      const detailBox = document.getElementById('detailBox');
+      const loadingSection = document.getElementById('loadingSection');
+      const fallbackSection = document.getElementById('fallbackSection');
+      const timerFill = document.getElementById('timerFill');
+      const downloadTimerFill = document.getElementById('downloadTimerFill');
+      const countdownText = document.getElementById('countdownText');
+      const actionButtons = document.getElementById('actionButtons');
+      const smallNote = document.getElementById('smallNote');
+      const downloadContainer = document.getElementById('downloadContainer');
+
+      // 文件项 & 徽章
+      const fileMain = document.getElementById('fileMain');
+      const filePhp  = document.getElementById('filePhp');
+      const badgeMain = document.getElementById('badgeMain');
+      const badgePhp  = document.getElementById('badgePhp');
+
+      // 状态变量
+      let isRedirected = false;
+      let checkTimeoutId = null;
+      let countdownIntervalId = null;
+      let progressIntervalId = null;
+      let phpDelayTimeoutId = null;
+
+      // ---------- 进度条视觉效果 (检测时) ----------
+      function startProgressBar() {
+        let width = 0;
+        if (progressIntervalId) clearInterval(progressIntervalId);
+        progressIntervalId = setInterval(() => {
+          if (width < 90) {
+            width += 1.5;
+            if (width > 90) width = 90;
+            timerFill.style.width = width + '%';
+          }
+        }, 40);
+      }
+
+      function stopProgressBar() {
+        if (progressIntervalId) {
+          clearInterval(progressIntervalId);
+          progressIntervalId = null;
+        }
+      }
+
+      // ---------- 清理所有定时器 ----------
+      function clearAllTimers() {
+        if (checkTimeoutId) { clearTimeout(checkTimeoutId); checkTimeoutId = null; }
+        if (countdownIntervalId) { clearInterval(countdownIntervalId); countdownIntervalId = null; }
+        if (phpDelayTimeoutId) { clearTimeout(phpDelayTimeoutId); phpDelayTimeoutId = null; }
+        stopProgressBar();
+      }
+
+      // ---------- 触发单个文件下载 ----------
+      function triggerDownload(url, label) {
+        // 使用隐藏的 a 标签
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = '';
+        link.style.display = 'none';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          if (link.parentNode) link.parentNode.removeChild(link);
+        }, 1000);
+
+        // 备用 iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = url;
+        downloadContainer.appendChild(iframe);
+
+        console.log(`[下载触发] ${label}: ${url}`);
+      }
+
+      // ---------- 依次下载：先 main.zip，5 秒后 PHP 包 ----------
+      function startSequentialDownloads() {
+        if (isRedirected) return;
+        isRedirected = true;
+
+        downloadContainer.innerHTML = '';
+
+        // ---- 第 1 步：立即下载 main.zip ----
+        badgeMain.textContent = '下载中…';
+        badgeMain.style.background = '#2563eb';
+        badgeMain.style.color = 'white';
+        fileMain.classList.add('active');
+
+        triggerDownload(DOWNLOAD_MAIN, 'main.zip');
+
+        // 更新倒计时提示：进入 PHP 等待阶段
+        countdownText.textContent = `${PHP_DELAY_SEC} 秒后下载 PHP 环境包`;
+        smallNote.innerHTML = '⬇️ 服务器包下载中，请稍候…';
+
+        // ---- 第 2 步：5 秒后下载 PHP 包 ----
+        let phpSecondsLeft = PHP_DELAY_SEC;
+        const phpTotalMs = PHP_DELAY_SEC * 1000;
+        const phpStartTime = Date.now();
+
+        if (countdownIntervalId) clearInterval(countdownIntervalId);
+
+        countdownIntervalId = setInterval(() => {
+          const elapsed = Date.now() - phpStartTime;
+          const remainingMs = Math.max(0, phpTotalMs - elapsed);
+          const percent = (remainingMs / phpTotalMs) * 100;
+          downloadTimerFill.style.width = percent + '%';
+
+          const remainingSec = Math.ceil(remainingMs / 1000);
+          if (remainingSec !== phpSecondsLeft) {
+            phpSecondsLeft = remainingSec;
+            if (phpSecondsLeft > 0) {
+              countdownText.textContent = `${phpSecondsLeft} 秒后下载 PHP 环境包`;
+            }
+          }
+
+          if (remainingMs <= 0) {
+            clearInterval(countdownIntervalId);
+            countdownIntervalId = null;
+
+            // 标记 main.zip 已完成
+            badgeMain.textContent = '已下载';
+            badgeMain.style.background = '#22c55e';
+            badgeMain.style.color = 'white';
+            fileMain.classList.remove('active');
+            fileMain.classList.add('done');
+
+            // 触发 PHP 下载
+            badgePhp.textContent = '下载中…';
+            badgePhp.style.background = '#2563eb';
+            badgePhp.style.color = 'white';
+            filePhp.classList.add('active');
+
+            triggerDownload(DOWNLOAD_PHP, 'php 环境包');
+
+            countdownText.textContent = 'PHP 环境包下载中…';
+            downloadTimerFill.style.width = '0%';
+            smallNote.innerHTML = '⬇️ 两个文件均已触发下载，请检查浏览器下载栏。';
+
+            // 稍后将 PHP 标记为已完成
+            phpDelayTimeoutId = setTimeout(() => {
+              badgePhp.textContent = '已下载';
+              badgePhp.style.background = '#22c55e';
+              badgePhp.style.color = 'white';
+              filePhp.classList.remove('active');
+              filePhp.classList.add('done');
+              countdownText.textContent = '全部下载完成 ✅';
+              smallNote.innerHTML = '✅ 所有文件下载已触发。';
+            }, 1200);
+          }
+        }, 50);
+      }
+
+      // ---------- 显示“未启动”状态 ----------
+      function showNotRunningAndDownload() {
+        if (isRedirected) return;
+
+        loadingSection.classList.add('hidden');
+        fallbackSection.classList.remove('hidden');
+
+        statusIcon.textContent = '⚠️';
+        mainTitle.textContent = '服务器未启动';
+        subheadText.innerHTML = `无法连接到 <span class="highlight">${TARGET_HOST}:${TARGET_PORT}</span>，将依次下载服务器包与 PHP 环境包。`;
+
+        detailBox.innerHTML = `
+          <span>⚠️ 连接失败</span>
+          <span class="url-badge" style="background:#2c1e1e; color:#f7baba;">${TARGET_HOST}:${TARGET_PORT}</span>
+        `;
+
+        // 重置文件项状态
+        fileMain.classList.remove('active', 'done');
+        filePhp.classList.remove('active', 'done');
+        badgeMain.textContent = '等待中';
+        badgeMain.style.background = '#1e2d3e';
+        badgeMain.style.color = '#7bb3ff';
+        badgePhp.textContent = '等待中';
+        badgePhp.style.background = '#1e2d3e';
+        badgePhp.style.color = '#7bb3ff';
+
+        // 倒计时进度条
+        downloadTimerFill.style.width = '100%';
+
+        if (countdownIntervalId) clearInterval(countdownIntervalId);
+
+        let secondsLeft = DOWNLOAD_COUNTDOWN_SEC;
+        countdownText.textContent = `${secondsLeft} 秒后开始下载服务器包`;
+
+        const totalMs = DOWNLOAD_COUNTDOWN_SEC * 1000;
+        const startTime = Date.now();
+
+        countdownIntervalId = setInterval(() => {
+          const elapsed = Date.now() - startTime;
+          const remainingMs = Math.max(0, totalMs - elapsed);
+          const percent = (remainingMs / totalMs) * 100;
+          downloadTimerFill.style.width = percent + '%';
+
+          const remainingSec = Math.ceil(remainingMs / 1000);
+          if (remainingSec !== secondsLeft) {
+            secondsLeft = remainingSec;
+            if (secondsLeft >= 0) {
+              countdownText.textContent = `${secondsLeft} 秒后开始下载服务器包`;
+            }
+          }
+
+          if (remainingMs <= 0) {
+            clearInterval(countdownIntervalId);
+            countdownIntervalId = null;
+            startSequentialDownloads();
+          }
+        }, 50);
+
+        // 操作按钮
+        actionButtons.innerHTML = `
+          <button class="btn btn-primary" id="manualDownloadBtn">⬇ 立即开始下载</button>
+          <button class="btn" id="retryBtn">🔄 重试连接</button>
+        `;
+
+        document.getElementById('manualDownloadBtn').addEventListener('click', function(e) {
+          e.preventDefault();
+          if (countdownIntervalId) {
+            clearInterval(countdownIntervalId);
+            countdownIntervalId = null;
+          }
+          startSequentialDownloads();
+        });
+
+        document.getElementById('retryBtn').addEventListener('click', function(e) {
+          e.preventDefault();
+          resetAndCheck();
+        });
+
+        smallNote.innerHTML = '⬇️ 先下载 main.zip，5 秒后再下载 PHP 环境包。';
+      }
+
+      // ---------- 重置并重新检测 ----------
+      function resetAndCheck() {
+        clearAllTimers();
+        isRedirected = false;
+
+        loadingSection.classList.remove('hidden');
+        fallbackSection.classList.add('hidden');
+        statusIcon.textContent = '🔄';
+        mainTitle.textContent = '正在检测服务器连通性';
+        subheadText.innerHTML = `正在尝试连接 <span class="highlight">${TARGET_HOST}:${TARGET_PORT}</span>，请稍候...`;
+        detailBox.innerHTML = `
+          <span>🔍 检测端点</span>
+          <span class="url-badge">${TARGET_HOST}:${TARGET_PORT}</span>
+        `;
+        timerFill.style.width = '0%';
+        actionButtons.innerHTML = '';
+        smallNote.innerHTML = '⚡ 只要有 HTTP 返回就会自动跳转';
+        downloadContainer.innerHTML = '';
+
+        // 重置文件项
+        fileMain.classList.remove('active', 'done');
+        filePhp.classList.remove('active', 'done');
+        badgeMain.textContent = '等待中';
+        badgeMain.style.background = '#1e2d3e';
+        badgeMain.style.color = '#7bb3ff';
+        badgePhp.textContent = '等待中';
+        badgePhp.style.background = '#1e2d3e';
+        badgePhp.style.color = '#7bb3ff';
+
+        startConnectivityCheck();
+      }
+
+      // ---------- 核心: HTTP 连通性检测 ----------
+      function startConnectivityCheck() {
+        if (checkTimeoutId) {
+          clearTimeout(checkTimeoutId);
+          checkTimeoutId = null;
+        }
+        stopProgressBar();
+        startProgressBar();
+
+        checkTimeoutId = setTimeout(() => {
+          if (isRedirected) return;
+          if (!window._checkFinished) {
+            window._checkFinished = true;
+            stopProgressBar();
+            timerFill.style.width = '100%';
+            showNotRunningAndDownload();
+          }
+        }, CHECK_TIMEOUT_MS);
+
+        window._checkFinished = false;
+
+        fetch(TARGET_URL, {
+          method: 'GET',
+          mode: 'no-cors',
+          cache: 'no-store',
+          signal: AbortSignal.timeout ? AbortSignal.timeout(CHECK_TIMEOUT_MS) : undefined,
+        })
+        .then(() => {
+          if (window._checkFinished) return;
+          window._checkFinished = true;
+
+          if (checkTimeoutId) { clearTimeout(checkTimeoutId); checkTimeoutId = null; }
+          stopProgressBar();
+          timerFill.style.width = '100%';
+
+          if (!isRedirected) {
+            isRedirected = true;
+            statusIcon.textContent = '✅';
+            mainTitle.textContent = '服务器已启动';
+            subheadText.innerHTML = `连接成功，正在跳转到 <span class="highlight">${TARGET_URL}</span>`;
+            detailBox.innerHTML = `
+              <span>✅ 连接成功</span>
+              <span class="url-badge" style="background:#1e3a2e; color:#a7f0ba;">${TARGET_HOST}:${TARGET_PORT}</span>
+            `;
+            window.location.href = TARGET_URL;
+          }
+        })
+        .catch(() => {
+          if (window._checkFinished) return;
+          window._checkFinished = true;
+
+          if (checkTimeoutId) { clearTimeout(checkTimeoutId); checkTimeoutId = null; }
+          stopProgressBar();
+          timerFill.style.width = '100%';
+          showNotRunningAndDownload();
+        });
+      }
+
+      // ---------- 初始化 ----------
+      function init() {
+        isRedirected = false;
+        window._checkFinished = false;
+        clearAllTimers();
+
+        loadingSection.classList.remove('hidden');
+        fallbackSection.classList.add('hidden');
+        actionButtons.innerHTML = '';
+        downloadContainer.innerHTML = '';
+
+        startConnectivityCheck();
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
